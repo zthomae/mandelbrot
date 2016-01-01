@@ -19,6 +19,36 @@ const (
 	blackIndex
 )
 
+func usage() {
+	fmt.Fprintln(os.Stderr, `Usage: ./mandelbrot [flags]
+
+The following flags are valid:
+
+* --startPos <real> [<imag>]: Set the center position at the start
+      of the animation. If only real given, set imag to real. Mandatory.
+* --endPos <real> [<imag>]: Set the center position at the end of
+      the animation. If only real given, set imag to real. If not given,
+	  this will be set to the starting position.
+* --startZoom <real> [<imag>]: Set the zoom (the width/height visible
+      in the image) at the start of the animation. If imag is not given,
+	  it will be set to 0. Mandatory
+* --endZoom <real> [<imag>]: Set the zoom at the end of the animation. If
+      imag is not given, it will be set to 0. If not given, this will be
+	  set to the starting zoom.
+* --size <x> [<y>]: Set the size (in pixels) of the image drawn. If y is
+      not given, it will be set to x. Defaults to 512x512.
+* --iters <n>: Set the number of iterations to use when testing for
+      membership in the Mandelbrot set. Defaults to 1000.
+* --frames <n>: Set the number of frames that will be in the animation.
+      Defaults to 25.
+* --delay <n>: Sets the delay between frames (in 100ths of a second).
+      Defaults to 8
+* --output <f>: Sets the output file to f. If not given, will output to
+      standard out.
+* --help: Displays this message.
+* --test: Runs the program with test parameters`)
+}
+
 // escapeIters returns the number of iterations
 // needed to escape for the given c, or nIter if
 // it doesn't escape within nIter iterations
@@ -87,10 +117,17 @@ func args() State {
 	nFramesSet := false
 	delaySet := false
 	argc := len(os.Args)
+	if argc == 1 {
+		usage()
+		os.Exit(1)
+	}
 	i := 1
 	for i < argc {
 		var err error
 		switch os.Args[i] {
+		case "--help":
+			usage()
+			os.Exit(1)
 		case "--startPos":
 			var r, im float64 // initialized in inner scopes
 			if i == argc-1 {
@@ -298,6 +335,7 @@ func args() State {
 			return s
 		default:
 			fmt.Fprintf(os.Stderr, "unexpected argument %s\n", os.Args[i])
+			usage()
 			os.Exit(1)
 		}
 	}
