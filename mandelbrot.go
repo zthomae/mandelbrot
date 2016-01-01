@@ -41,10 +41,10 @@ func mandelbrot(sX, sY, nIter int,
 
 	hX := float64(sX) / 2.0
 	hY := float64(sY) / 2.0
-	lr := real(center) - width
-	hr := real(center) + width
-	li := imag(center) - height
-	hi := imag(center) + height
+	lr := real(center) - width/2.0
+	hr := real(center) + width/2.0
+	li := imag(center) - height/2.0
+	hi := imag(center) + height/2.0
 	fromPos := func(x, y int) complex128 {
 		r := real(center) + (float64(x)-hX)/float64(sX)*(hr-lr)
 		i := imag(center) + (float64(y)-hY)/float64(sY)*(hi-li)
@@ -282,17 +282,19 @@ func args() State {
 			i += 2
 			delaySet = true
 		case "--test":
+			// TODO: This is not a perfect animation...
 			s.startPos = complex(-1.0, 0.0)
 			s.endPos = complex(-1.31, 0.0)
-			s.startView[0] = 0.25
-			s.startView[1] = 0.25
-			s.endView[0] = 0.05875
-			s.endView[1] = 0.05875
+			s.startView[0] = 0.5
+			s.startView[1] = 0.5
+			s.endView[0] = 0.12
+			s.endView[1] = 0.12
 			s.sX = 512
 			s.sY = 512
 			s.nIter = 1000
 			s.nFrames = 25
 			s.delay = 8
+			s.filename = "test.gif" // good decision?
 			return s
 		default:
 			fmt.Fprintf(os.Stderr, "unexpected argument %s\n", os.Args[i])
