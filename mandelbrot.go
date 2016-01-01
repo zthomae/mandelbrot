@@ -1,10 +1,14 @@
 package main
 
 import (
+	"bufio"
+	"fmt"
 	"image"
 	"image/color"
 	"image/gif"
+	"io"
 	"os"
+	"strconv"
 )
 
 var palette = []color.Color{color.White, color.Black}
@@ -30,12 +34,12 @@ func escapeIters(c complex128, nIter int) int {
 
 // mandelbrot draws an image of the mandelbrot set
 // within the given real and imaginary bounds
-func mandelbrot(center complex128, width, height float64) *image.Paletted {
-	sX := 512 // TODO: Variable size
-	sY := 512
-	hX := 256.0
-	hY := 256.0
-	nIter := 1000
+func mandelbrot(sX, sY, nIter int,
+	center complex128,
+	width, height float64) *image.Paletted {
+
+	hX := float64(sX) / 2.0
+	hY := float64(sY) / 2.0
 	lr := real(center) - width
 	hr := real(center) + width
 	li := imag(center) - height
@@ -73,24 +77,317 @@ func scale(c complex128, s float64) complex128 {
 	return res
 }
 
-func main() {
-	var startPos complex128 = complex(-1.02, 0.0)
-	var endPos complex128 = complex(-1.31, 0.0)
-	xs := [2]float64{0.25, 0.06}
-	ys := [2]float64{0.25, 0.06}
-	nFrames := 25
-	frames := make([]Frame, nFrames)
-	for i := 0; i < nFrames; i++ {
-		frac := float64(i) / float64(nFrames-1)
-		center := startPos + (scale(endPos, frac) - scale(startPos, frac))
+type State struct {
+	startPos, endPos              complex128
+	startView, endView            [2]float64
+	filename                      string
+	sX, sY, nIter, nFrames, delay int
+}
+
+// parse command-line arguments, returning a valid State struct
+func args() State {
+	s := State{}
+	startPosSet := false
+	endPosSet := false
+	startViewSet := false
+	endViewSet := false
+	sizeSet := false
+	nIterSet := false
+	nFramesSet := false
+	delaySet := false
+	argc := len(os.Args)
+	i := 1
+	for i < argc {
+		var err error
+		switch os.Args[i] {
+		case "--startPos":
+			var r, im float64 // initialized in inner scopes
+			if i == argc-1 {
+				fmt.Fprintln(os.Stderr, "expected argument(s) to --startPos")
+				os.Exit(1)
+			}
+			r, err := strconv.ParseFloat(os.Args[i+1], 64)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startPos\n", os.Args[i+1])
+				os.Exit(1)
+			}
+			if i == argc-2 {
+				im = 0.0
+				i += 2
+			} else {
+				im, err = strconv.ParseFloat(os.Args[i+2], 64)
+				if os.Args[i+2][0] == '-' {
+					im = 0.0
+					i += 2
+				} else if err != nil {
+					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startPos\n", os.Args[i+2])
+					os.Exit(1)
+				} else {
+					i += 3
+				}
+			}
+			s.startPos = complex(r, im)
+			startPosSet = true
+		case "--endPos":
+			var r, im float64 // initialized in inner scopes
+			if i == argc-1 {
+				fmt.Fprintln(os.Stderr, "expected argument(s) to --endPos")
+				os.Exit(1)
+			}
+			r, err := strconv.ParseFloat(os.Args[i+1], 64)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endPos\n", os.Args[i+1])
+				os.Exit(1)
+			}
+			if i == argc-2 {
+				im = 0.0
+				i += 2
+			} else {
+				im, err = strconv.ParseFloat(os.Args[i+2], 64)
+				if os.Args[i+2][0] == '-' {
+					im = 0.0
+					i += 2
+				} else if err != nil {
+					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endPos\n", os.Args[i+2])
+					os.Exit(1)
+				} else {
+					i += 3
+				}
+			}
+			s.endPos = complex(r, im)
+			endPosSet = true
+		case "--startView":
+			if i == argc-1 {
+				fmt.Fprintln(os.Stderr, "expected argument(s) to --startView")
+				os.Exit(1)
+			}
+			s.startView[0], err = strconv.ParseFloat(os.Args[i+1], 64)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startView\n", os.Args[i+1])
+				os.Exit(1)
+			}
+			if i == argc-2 {
+				s.startView[1] = s.startView[0]
+				i += 2
+			} else {
+				s.startView[1], err = strconv.ParseFloat(os.Args[i+2], 64)
+				if os.Args[i+2][0] == '-' {
+					s.startView[1] = s.startView[0]
+					i += 2
+				} else if err != nil {
+					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startView\n", os.Args[i+2])
+					os.Exit(1)
+				} else {
+					i += 3
+				}
+			}
+			startViewSet = true
+		case "--endView":
+			if i == argc-1 {
+				fmt.Fprintln(os.Stderr, "expected argument(s) to --endView")
+				os.Exit(1)
+			}
+			s.endView[0], err = strconv.ParseFloat(os.Args[i+1], 64)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endView\n", os.Args[i+1])
+				os.Exit(1)
+			}
+			if i == argc-2 {
+				s.endView[1] = s.endView[0]
+				i += 2
+			} else {
+				s.endView[1], err = strconv.ParseFloat(os.Args[i+2], 64)
+				if os.Args[i+2][0] == '-' {
+					s.endView[1] = s.endView[0]
+					i += 2
+				} else if err != nil {
+					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endView\n", os.Args[i+2])
+					os.Exit(1)
+				} else {
+					i += 3
+				}
+			}
+			endViewSet = true
+		case "--output":
+			if i == argc-1 {
+				fmt.Fprintln(os.Stderr, "expected argument to --output")
+				os.Exit(1)
+			}
+			s.filename = os.Args[i+1]
+			i += 2
+		case "--size":
+			var sX, sY int64 // initialized in inner scopes
+			if i == argc-1 {
+				fmt.Fprintln(os.Stderr, "expected argument(s) to --size")
+				os.Exit(1)
+			}
+			sX, err = strconv.ParseInt(os.Args[i+1], 10, 0)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --size\n", os.Args[i+1])
+			}
+			if i == argc-2 {
+				sY = sX
+				i += 2
+			} else {
+				sY, err = strconv.ParseInt(os.Args[i+2], 10, 0)
+				if os.Args[i+2][0] == '-' {
+					sY = sX
+					i += 2
+				} else if err != nil {
+					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --size\n", os.Args[i+2])
+					os.Exit(1)
+				} else {
+					i += 3
+				}
+			}
+			s.sX = int(sX)
+			s.sY = int(sY)
+			sizeSet = true
+		case "--iters":
+			if i == argc-1 {
+				fmt.Fprintln(os.Stderr, "expected argument to --iters")
+				os.Exit(1)
+			}
+			nIter, err := strconv.ParseInt(os.Args[i+1], 10, 0)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --iters\n", os.Args[i+1])
+				os.Exit(1)
+			}
+			s.nIter = int(nIter)
+			i += 2
+			nIterSet = true
+		case "--frames":
+			if i == argc-1 {
+				fmt.Fprintln(os.Stderr, "expected argument to --frames")
+				os.Exit(1)
+			}
+			nFrames, err := strconv.ParseInt(os.Args[i+1], 10, 0)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --frames\n", os.Args[i+1])
+				os.Exit(1)
+			}
+			if nFrames < 1 {
+				fmt.Fprintln(os.Stderr, "number of frames must be at least 1")
+				os.Exit(1)
+			}
+			s.nFrames = int(nFrames)
+			i += 2
+			nFramesSet = true
+		case "--delay":
+			if i == argc-1 {
+				fmt.Fprintln(os.Stderr, "expected argument to --delay")
+				os.Exit(1)
+			}
+			delay, err := strconv.ParseInt(os.Args[i+1], 10, 0)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --delay\n", os.Args[i+1])
+				os.Exit(1)
+			}
+			if delay < 1 {
+				fmt.Fprintf(os.Stderr, "delay time must be at least 1")
+				os.Exit(1)
+			}
+			s.delay = int(delay)
+			i += 2
+			delaySet = true
+		case "--test":
+			s.startPos = complex(-1.0, 0.0)
+			s.endPos = complex(-1.31, 0.0)
+			s.startView[0] = 0.25
+			s.startView[1] = 0.25
+			s.endView[0] = 0.05875
+			s.endView[1] = 0.05875
+			s.sX = 512
+			s.sY = 512
+			s.nIter = 1000
+			s.nFrames = 25
+			s.delay = 8
+			return s
+		default:
+			fmt.Fprintf(os.Stderr, "unexpected argument %s\n", os.Args[i])
+			os.Exit(1)
+		}
+	}
+	if !startPosSet {
+		fmt.Fprintln(os.Stderr, "need to specify start position")
+		os.Exit(1)
+	} else if !endPosSet {
+		s.endPos = s.startPos
+	}
+	if !startViewSet && !endViewSet {
+		fmt.Fprintln(os.Stderr, "need to give start view")
+		os.Exit(1)
+	} else if !endViewSet {
+		s.endView[0] = s.startView[0]
+		s.endView[1] = s.startView[1]
+	}
+	if !sizeSet {
+		s.sX = 512
+		s.sY = 512
+	}
+	if !nIterSet {
+		s.nIter = 1000
+	}
+	if !nFramesSet && !endViewSet {
+		s.nFrames = 1
+	} else if !nFramesSet {
+		s.nFrames = 25
+	}
+	if s.nFrames > 1 && !endViewSet && !endPosSet {
+		fmt.Fprintln(os.Stderr, "setting frames argument to 1 due to lack of movement")
+		s.nFrames = 1
+	}
+	if s.nFrames == 1 {
+		if endViewSet {
+			fmt.Fprintln(os.Stderr, "frames set to 1; ignoring end view")
+		}
+		if endPosSet {
+			fmt.Fprintln(os.Stderr, "frames set to 1; ignoring end position")
+		}
+	}
+	if !delaySet {
+		s.delay = 8
+	}
+	return s
+}
+
+// create animation according to the State struct
+func (s State) animate() {
+	xs := [2]float64{s.startView[0], s.endView[0]}
+	ys := [2]float64{s.startView[1], s.endView[1]}
+	frames := make([]Frame, s.nFrames)
+	for i := 0; i < s.nFrames; i++ {
+		denom := s.nFrames
+		if denom > 1 {
+			denom--
+		}
+		frac := float64(i) / float64(denom)
+		center := s.startPos + (scale(s.endPos, frac) - scale(s.startPos, frac))
 		width := xs[0] + (xs[1]-xs[0])*frac
 		height := ys[0] + (ys[1]-ys[0])*frac
 		frames[i] = Frame{center, width, height}
 	}
 	anim := gif.GIF{LoopCount: 0}
 	for _, vals := range frames {
-		anim.Delay = append(anim.Delay, 8)
-		anim.Image = append(anim.Image, mandelbrot(vals.center, vals.width, vals.height))
+		anim.Delay = append(anim.Delay, s.delay)
+		anim.Image = append(anim.Image,
+			mandelbrot(s.sX, s.sY, s.nIter, vals.center, vals.width, vals.height))
 	}
-	gif.EncodeAll(os.Stdout, &anim)
+	var out io.Writer
+	if s.filename == "" {
+		out = os.Stdout
+	} else {
+		f, err := os.Create(s.filename)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, err)
+			os.Exit(1)
+		}
+		defer f.Close()
+		out = bufio.NewWriter(f)
+	}
+	gif.EncodeAll(out, &anim)
+}
+
+func main() {
+	args().animate()
 }
