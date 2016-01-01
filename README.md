@@ -13,7 +13,7 @@ options for most of the parameters describing an animation:
 
 A test animation can be created with the `--test` option.
 
-## USAGE
+## Usage
 
 The following flags are valid:
 
@@ -44,11 +44,23 @@ The following flags are valid:
 Usage information can be printed by either invoking the command with no flags
 or by invoking with `--help`.
 
-## TODO:
+## A true story
+
+A few days ago I bought [The Go Programming Language](http://www.gopl.io/).
+Early in the first chapter, they give an example of how to use the
+[gif package](https://golang.org/pkg/image/gif/). They chose to animate
+[Lissajous curves](https://en.wikipedia.org/wiki/Lissajous_curve), but I
+thought it would be more fun to animate the Mandelbrot set.
+
+After I had finished the basic program, I noticed that, two chapters later,
+they used the Mandelbrot set as one of their own examples, too. Oops.
+
+## TODO
 
 * Expand the color palette and give other drawing options
+* Optionally use more precision
 * Testing?
 
-## LICENSE
+## License
 
 MIT
