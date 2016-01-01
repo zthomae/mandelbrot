@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"sync"
 )
 
 var palette = []color.Color{color.White, color.Black}
@@ -66,17 +67,7 @@ func mandelbrot(sX, sY, nIter int,
 	return img
 }
 
-type Frame struct {
-	center complex128
-	width  float64
-	height float64
-}
-
-func scale(c complex128, s float64) complex128 {
-	var res complex128 = complex(real(c)*s, imag(c)*s)
-	return res
-}
-
+// State stores all of the data specifying an animation
 type State struct {
 	startPos, endPos              complex128
 	startView, endView            [2]float64
@@ -351,6 +342,19 @@ func args() State {
 	return s
 }
 
+// Frame holds the parameters for a given image (position and view)
+type Frame struct {
+	center complex128
+	width  float64
+	height float64
+}
+
+// scale a complex number by a scalar float
+func scale(c complex128, s float64) complex128 {
+	var res complex128 = complex(real(c)*s, imag(c)*s)
+	return res
+}
+
 // create animation according to the State struct
 func (s State) animate() {
 	xs := [2]float64{s.startView[0], s.endView[0]}
@@ -367,12 +371,23 @@ func (s State) animate() {
 		height := ys[0] + (ys[1]-ys[0])*frac
 		frames[i] = Frame{center, width, height}
 	}
+
+	// spawn goroutines to draw the frames, waiting for them all to finish
 	anim := gif.GIF{LoopCount: 0}
-	for _, vals := range frames {
-		anim.Delay = append(anim.Delay, s.delay)
-		anim.Image = append(anim.Image,
-			mandelbrot(s.sX, s.sY, s.nIter, vals.center, vals.width, vals.height))
+	anim.Delay = make([]int, s.nFrames)
+	anim.Image = make([]*image.Paletted, s.nFrames)
+	var wg sync.WaitGroup
+	wg.Add(s.nFrames)
+	for i, vals := range frames {
+		anim.Delay[i] = s.delay
+		go func(i int, vals Frame) {
+			defer wg.Done()
+			anim.Image[i] = mandelbrot(s.sX, s.sY, s.nIter,
+				vals.center, vals.width, vals.height)
+		}(i, vals)
 	}
+	wg.Wait()
+
 	var out io.Writer
 	if s.filename == "" {
 		out = os.Stdout
