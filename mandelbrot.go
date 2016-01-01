@@ -70,7 +70,7 @@ func mandelbrot(sX, sY, nIter int,
 // State stores all of the data specifying an animation
 type State struct {
 	startPos, endPos              complex128
-	startView, endView            [2]float64
+	startZoom, endZoom            [2]float64
 	filename                      string
 	sX, sY, nIter, nFrames, delay int
 }
@@ -80,8 +80,8 @@ func args() State {
 	s := State{}
 	startPosSet := false
 	endPosSet := false
-	startViewSet := false
-	endViewSet := false
+	startZoomSet := false
+	endZoomSet := false
 	sizeSet := false
 	nIterSet := false
 	nFramesSet := false
@@ -147,58 +147,58 @@ func args() State {
 			}
 			s.endPos = complex(r, im)
 			endPosSet = true
-		case "--startView":
+		case "--startZoom":
 			if i == argc-1 {
-				fmt.Fprintln(os.Stderr, "expected argument(s) to --startView")
+				fmt.Fprintln(os.Stderr, "expected argument(s) to --startZoom")
 				os.Exit(1)
 			}
-			s.startView[0], err = strconv.ParseFloat(os.Args[i+1], 64)
+			s.startZoom[0], err = strconv.ParseFloat(os.Args[i+1], 64)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startView\n", os.Args[i+1])
+				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startZoom\n", os.Args[i+1])
 				os.Exit(1)
 			}
 			if i == argc-2 {
-				s.startView[1] = s.startView[0]
+				s.startZoom[1] = s.startZoom[0]
 				i += 2
 			} else {
-				s.startView[1], err = strconv.ParseFloat(os.Args[i+2], 64)
+				s.startZoom[1], err = strconv.ParseFloat(os.Args[i+2], 64)
 				if os.Args[i+2][0] == '-' {
-					s.startView[1] = s.startView[0]
+					s.startZoom[1] = s.startZoom[0]
 					i += 2
 				} else if err != nil {
-					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startView\n", os.Args[i+2])
+					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startZoom\n", os.Args[i+2])
 					os.Exit(1)
 				} else {
 					i += 3
 				}
 			}
-			startViewSet = true
-		case "--endView":
+			startZoomSet = true
+		case "--endZoom":
 			if i == argc-1 {
-				fmt.Fprintln(os.Stderr, "expected argument(s) to --endView")
+				fmt.Fprintln(os.Stderr, "expected argument(s) to --endZoom")
 				os.Exit(1)
 			}
-			s.endView[0], err = strconv.ParseFloat(os.Args[i+1], 64)
+			s.endZoom[0], err = strconv.ParseFloat(os.Args[i+1], 64)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endView\n", os.Args[i+1])
+				fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endZoom\n", os.Args[i+1])
 				os.Exit(1)
 			}
 			if i == argc-2 {
-				s.endView[1] = s.endView[0]
+				s.endZoom[1] = s.endZoom[0]
 				i += 2
 			} else {
-				s.endView[1], err = strconv.ParseFloat(os.Args[i+2], 64)
+				s.endZoom[1], err = strconv.ParseFloat(os.Args[i+2], 64)
 				if os.Args[i+2][0] == '-' {
-					s.endView[1] = s.endView[0]
+					s.endZoom[1] = s.endZoom[0]
 					i += 2
 				} else if err != nil {
-					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endView\n", os.Args[i+2])
+					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endZoom\n", os.Args[i+2])
 					os.Exit(1)
 				} else {
 					i += 3
 				}
 			}
-			endViewSet = true
+			endZoomSet = true
 		case "--output":
 			if i == argc-1 {
 				fmt.Fprintln(os.Stderr, "expected argument to --output")
@@ -285,10 +285,10 @@ func args() State {
 			// TODO: This is not a perfect animation...
 			s.startPos = complex(-1.0, 0.0)
 			s.endPos = complex(-1.31, 0.0)
-			s.startView[0] = 0.5
-			s.startView[1] = 0.5
-			s.endView[0] = 0.12
-			s.endView[1] = 0.12
+			s.startZoom[0] = 0.5
+			s.startZoom[1] = 0.5
+			s.endZoom[0] = 0.12
+			s.endZoom[1] = 0.12
 			s.sX = 512
 			s.sY = 512
 			s.nIter = 1000
@@ -307,12 +307,12 @@ func args() State {
 	} else if !endPosSet {
 		s.endPos = s.startPos
 	}
-	if !startViewSet && !endViewSet {
-		fmt.Fprintln(os.Stderr, "need to give start view")
+	if !startZoomSet && !endZoomSet {
+		fmt.Fprintln(os.Stderr, "need to give start zoom")
 		os.Exit(1)
-	} else if !endViewSet {
-		s.endView[0] = s.startView[0]
-		s.endView[1] = s.startView[1]
+	} else if !endZoomSet {
+		s.endZoom[0] = s.startZoom[0]
+		s.endZoom[1] = s.startZoom[1]
 	}
 	if !sizeSet {
 		s.sX = 512
@@ -321,18 +321,18 @@ func args() State {
 	if !nIterSet {
 		s.nIter = 1000
 	}
-	if !nFramesSet && !endViewSet {
+	if !nFramesSet && !endZoomSet {
 		s.nFrames = 1
 	} else if !nFramesSet {
 		s.nFrames = 25
 	}
-	if s.nFrames > 1 && !endViewSet && !endPosSet {
+	if s.nFrames > 1 && !endZoomSet && !endPosSet {
 		fmt.Fprintln(os.Stderr, "setting frames argument to 1 due to lack of movement")
 		s.nFrames = 1
 	}
 	if s.nFrames == 1 {
-		if endViewSet {
-			fmt.Fprintln(os.Stderr, "frames set to 1; ignoring end view")
+		if endZoomSet {
+			fmt.Fprintln(os.Stderr, "frames set to 1; ignoring end zoom")
 		}
 		if endPosSet {
 			fmt.Fprintln(os.Stderr, "frames set to 1; ignoring end position")
@@ -344,7 +344,7 @@ func args() State {
 	return s
 }
 
-// Frame holds the parameters for a given image (position and view)
+// Frame holds the parameters for a given image (position and zoom)
 type Frame struct {
 	center complex128
 	width  float64
@@ -359,8 +359,8 @@ func scale(c complex128, s float64) complex128 {
 
 // create animation according to the State struct
 func (s State) animate() {
-	xs := [2]float64{s.startView[0], s.endView[0]}
-	ys := [2]float64{s.startView[1], s.endView[1]}
+	xs := [2]float64{s.startZoom[0], s.endZoom[0]}
+	ys := [2]float64{s.startZoom[1], s.endZoom[1]}
 	frames := make([]Frame, s.nFrames)
 	for i := 0; i < s.nFrames; i++ {
 		denom := s.nFrames
