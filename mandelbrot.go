@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 )
 
@@ -144,12 +145,14 @@ func args() State {
 				i += 2
 			} else {
 				im, err = strconv.ParseFloat(os.Args[i+2], 64)
-				if os.Args[i+2][0] == '-' {
-					im = 0.0
-					i += 2
-				} else if err != nil {
-					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startPos\n", os.Args[i+2])
-					os.Exit(1)
+				if err != nil {
+					if strings.HasPrefix(os.Args[i+2], "--") {
+						im = 0.0
+						i += 2
+					} else {
+						fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startPos\n", os.Args[i+2])
+						os.Exit(1)
+					}
 				} else {
 					i += 3
 				}
@@ -172,12 +175,14 @@ func args() State {
 				i += 2
 			} else {
 				im, err = strconv.ParseFloat(os.Args[i+2], 64)
-				if os.Args[i+2][0] == '-' {
-					im = 0.0
-					i += 2
-				} else if err != nil {
-					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endPos\n", os.Args[i+2])
-					os.Exit(1)
+				if err != nil {
+					if strings.HasPrefix(os.Args[i+2], "--") {
+						im = 0.0
+						i += 2
+					} else {
+						fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endPos\n", os.Args[i+2])
+						os.Exit(1)
+					}
 				} else {
 					i += 3
 				}
@@ -199,12 +204,14 @@ func args() State {
 				i += 2
 			} else {
 				s.startZoom[1], err = strconv.ParseFloat(os.Args[i+2], 64)
-				if os.Args[i+2][0] == '-' {
-					s.startZoom[1] = s.startZoom[0]
-					i += 2
-				} else if err != nil {
-					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startZoom\n", os.Args[i+2])
-					os.Exit(1)
+				if err != nil {
+					if strings.HasPrefix(os.Args[i+2], "--") {
+						s.startZoom[1] = s.startZoom[0]
+						i += 2
+					} else {
+						fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --startZoom\n", os.Args[i+2])
+						os.Exit(1)
+					}
 				} else {
 					i += 3
 				}
@@ -225,12 +232,14 @@ func args() State {
 				i += 2
 			} else {
 				s.endZoom[1], err = strconv.ParseFloat(os.Args[i+2], 64)
-				if os.Args[i+2][0] == '-' {
-					s.endZoom[1] = s.endZoom[0]
-					i += 2
-				} else if err != nil {
-					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endZoom\n", os.Args[i+2])
-					os.Exit(1)
+				if err != nil {
+					if strings.HasPrefix(os.Args[i+2], "--") {
+						s.endZoom[1] = s.endZoom[0]
+						i += 2
+					} else {
+						fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --endZoom\n", os.Args[i+2])
+						os.Exit(1)
+					}
 				} else {
 					i += 3
 				}
@@ -258,12 +267,14 @@ func args() State {
 				i += 2
 			} else {
 				sY, err = strconv.ParseInt(os.Args[i+2], 10, 0)
-				if os.Args[i+2][0] == '-' {
-					sY = sX
-					i += 2
-				} else if err != nil {
-					fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --size\n", os.Args[i+2])
-					os.Exit(1)
+				if err != nil {
+					if strings.HasPrefix(os.Args[i+2], "--") {
+						sY = sX
+						i += 2
+					} else {
+						fmt.Fprintf(os.Stderr, "cannot parse %s as argument to --size\n", os.Args[i+2])
+						os.Exit(1)
+					}
 				} else {
 					i += 3
 				}
