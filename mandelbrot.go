@@ -79,8 +79,7 @@ func mandelbrot(sX, sY, nIter int,
 	fromPos := func(x, y int) complex128 {
 		r := real(center) + (float64(x)-hX)/float64(sX)*(hr-lr)
 		i := imag(center) + (float64(y)-hY)/float64(sY)*(hi-li)
-		var c complex128 = complex(r, i)
-		return c
+		return complex(r, i)
 	}
 	rect := image.Rect(0, 0, sX, sY)
 	img := image.NewPaletted(rect, palette)
@@ -404,8 +403,7 @@ type Frame struct {
 
 // scale a complex number by a scalar float
 func scale(c complex128, s float64) complex128 {
-	var res complex128 = complex(real(c)*s, imag(c)*s)
-	return res
+	return complex(real(c)*s, imag(c)*s)
 }
 
 // create animation according to the State struct
