@@ -351,14 +351,14 @@ func args() State {
 		}
 	}
 	if !startPosSet {
-		fmt.Fprintln(os.Stderr, "need to specify start position\n")
+		fmt.Fprintln(os.Stderr, "need to specify start position")
 		usage()
 		os.Exit(1)
 	} else if !endPosSet {
 		s.endPos = s.startPos
 	}
 	if !startZoomSet && !endZoomSet {
-		fmt.Fprintln(os.Stderr, "need to give start zoom\n")
+		fmt.Fprintln(os.Stderr, "need to give start zoom")
 		usage()
 		os.Exit(1)
 	} else if !endZoomSet {
